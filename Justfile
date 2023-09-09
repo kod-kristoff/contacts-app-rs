@@ -6,3 +6,5 @@ serve-dev:
 
 test:
     cargo test --all
+serve:
+	cargo watch -- cargo run

@@ -30,7 +30,8 @@
       <td>{{ contact.last }}</td>
       <td>{{ contact.phone }}</td>
       <td>{{ contact.email }}</td>
-      <td><a href="/contacts/{{ contact.id }}/edit">Edit</a></td>
+      <td><a href="/contacts/{{ contact.id }}/edit">Edit</a>
+          <a href="/contacts/{{ contact.id }}">View</a></td>
     </tr>
     {% endfor %}
   </tbody>
