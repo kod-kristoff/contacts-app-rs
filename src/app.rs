@@ -1,7 +1,7 @@
 use axum::{
     extract::{FromRef, Path, Query, State},
     response::{IntoResponse, Redirect, Response},
-    routing::{get, post},
+    routing::{delete, get, post},
     Form, Router,
 };
 use axum_flash::{Flash, IncomingFlashes, Level};
@@ -31,7 +31,7 @@ pub fn create_app() -> Router {
             "/contacts/new",
             get(get_contacts_new).post(post_contacts_new),
         )
-        .route("/contacts/:contact_id/delete", post(contacts_delete))
+        .route("/contacts/:contact_id", delete(contacts_delete))
         .route(
             "/contacts/:contact_id/edit",
             get(contacts_edit_get).post(contacts_edit_post),
