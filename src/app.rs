@@ -205,7 +205,11 @@ async fn contacts_edit_post(
     contact.update(first_name, last_name, phone, email);
 
     match state.contact_repo.save(contact).await {
-        Ok(()) => (flash.info("Updated contact!"), Redirect::to("/contacts")).into_response(),
+        Ok(()) => (
+            flash.info("Updated contact!"),
+            Redirect::to(&format!("/contacts/{contact_id}")),
+        )
+            .into_response(),
         Err(contact) => RenderHtml(
             Key("edit.html".to_owned()),
             engine,
