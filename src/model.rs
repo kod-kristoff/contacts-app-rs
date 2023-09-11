@@ -13,9 +13,9 @@ pub struct Contact {
     first: Option<String>,
     last: Option<String>,
     phone: Option<String>,
-    email: Option<String>,
+    pub email: Option<String>,
     #[serde(default)]
-    errors: HashMap<String, String>,
+    pub errors: HashMap<String, String>,
 }
 
 impl Default for Contact {

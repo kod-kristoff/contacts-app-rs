@@ -31,12 +31,15 @@ pub fn create_app() -> Router {
             "/contacts/new",
             get(get_contacts_new).post(post_contacts_new),
         )
-        .route("/contacts/:contact_id", delete(contacts_delete))
         .route(
             "/contacts/:contact_id/edit",
             get(contacts_edit_get).post(contacts_edit_post),
         )
-        .route("/contacts/:contact_id", get(contact_view))
+        .route("/contacts/:contact_id/email", get(contacts_email_get))
+        .route(
+            "/contacts/:contact_id",
+            delete(contacts_delete).get(contact_view),
+        )
         .with_state(AppState {
             engine: Engine::from(jinja),
             contact_repo: repo,
@@ -186,6 +189,30 @@ async fn contacts_edit_get(
         engine,
         NewContactCtx { contact },
     )
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct ContactsEmailParams {
+    email: Option<String>,
+}
+
+async fn contacts_email_get(
+    State(state): State<AppState>,
+    Path(contact_id): Path<u64>,
+    Query(email): Query<ContactsEmailParams>,
+) -> impl IntoResponse {
+    let mut contact = state
+        .contact_repo
+        .find(contact_id)
+        .await
+        .expect("a existing id");
+    contact.email = email.email;
+    contact.validate();
+    contact
+        .errors
+        .get("email")
+        .cloned()
+        .unwrap_or_else(|| String::new())
 }
 
 async fn contacts_edit_post(

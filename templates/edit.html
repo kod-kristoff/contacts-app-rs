@@ -5,7 +5,11 @@
     <legend>Contact Values</legend>
     <p>
       <label for="email">Email</label>
-      <input id="email" type="email" name="email" placeholder="Email" value="{{ contact.email or '' }}" />
+      <input id="email" type="email" name="email" 
+             hx-get="/contacts/{{ contact.id }}/email"
+            hx-trigger="change, keyup delay:200ms changed"
+             hx-target="next .error"
+             placeholder="Email" value="{{ contact.email or '' }}" />
       <span class="error">{{ contact.errors["email"] }}</span>
     </p>
       <p>
