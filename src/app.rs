@@ -7,6 +7,7 @@ use axum::{
 use axum_flash::{Flash, IncomingFlashes, Level};
 use axum_template::{engine::Engine, Key, RenderHtml};
 use minijinja::{path_loader, Environment};
+use tower_http::services::ServeDir;
 
 use crate::model::{Contact, MemContactRepo, SharedContactRepo};
 
@@ -40,6 +41,7 @@ pub fn create_app() -> Router {
             "/contacts/:contact_id",
             delete(contacts_delete).get(contact_view),
         )
+        .nest_service("/static", ServeDir::new("static"))
         .with_state(AppState {
             engine: Engine::from(jinja),
             contact_repo: repo,
@@ -73,11 +75,13 @@ pub struct IndexState {
     q: Option<String>,
     contacts: Vec<Contact>,
     messages: Vec<(Level, String)>,
+    page: usize,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct ContactsParams {
     q: Option<String>,
+    page: Option<usize>,
 }
 
 async fn contacts(
@@ -91,14 +95,16 @@ async fn contacts(
         messages.push((level, text.to_string()));
     }
     dbg!(&params);
+    let page = params.page.unwrap_or(1);
     let contacts = match &params.q {
-        None => state.contact_repo.all().await,
+        None => state.contact_repo.all(page).await,
         Some(search) => state.contact_repo.search(search).await,
     };
     let state = IndexState {
         q: params.q,
         contacts,
         messages,
+        page,
     };
     dbg!(&state);
     (

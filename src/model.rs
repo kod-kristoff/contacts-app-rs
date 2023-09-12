@@ -72,7 +72,7 @@ impl Contact {
 }
 #[async_trait::async_trait]
 pub trait ContactRepo {
-    async fn all(&self) -> Vec<Contact>;
+    async fn all(&self, page: usize) -> Vec<Contact>;
     async fn search(&self, query: &str) -> Vec<Contact>;
     async fn save(&self, contact: Contact) -> Result<(), Contact>;
     async fn find(&self, id: u64) -> Option<Contact>;
@@ -110,6 +110,9 @@ impl ContactStore {
         Self { contacts }
     }
 }
+
+const PAGE_SIZE: usize = 10;
+
 impl MemContactRepo {
     pub fn new() -> Self {
         Self {
@@ -180,8 +183,18 @@ impl MemContactRepo {
 
 #[async_trait::async_trait]
 impl ContactRepo for MemContactRepo {
-    async fn all(&self) -> Vec<Contact> {
-        self.store.read().await.contacts.values().cloned().collect()
+    async fn all(&self, page: usize) -> Vec<Contact> {
+        let start = (page - 1) * PAGE_SIZE;
+        let end = start + PAGE_SIZE;
+        self.store
+            .read()
+            .await
+            .contacts
+            .values()
+            .skip(start)
+            .take(PAGE_SIZE)
+            .cloned()
+            .collect()
     }
 
     async fn search(&self, query: &str) -> Vec<Contact> {
