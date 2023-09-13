@@ -9,6 +9,7 @@ edition = "2021"
 async-trait = "0.1.73"
 axum = { version = "0.6.20", features = ["macros", "form"] }
 axum-flash = "0.7.0"
+axum-htmx = "0.3.1"
 axum-template = { version = "1.0.0", features = ["minijinja"] }
 minijinja = { version = "1.0.7", features = ["loader"] }
 serde = { version = "1.0.188", features = ["derive"] }

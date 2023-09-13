@@ -5,6 +5,7 @@ use axum::{
     Form, Router,
 };
 use axum_flash::{Flash, IncomingFlashes, Level};
+use axum_htmx::HxTrigger;
 use axum_template::{engine::Engine, Key, RenderHtml};
 use minijinja::{path_loader, Environment};
 use tower_http::services::ServeDir;
@@ -75,13 +76,11 @@ pub struct IndexState {
     q: Option<String>,
     contacts: Vec<Contact>,
     messages: Vec<(Level, String)>,
-    page: usize,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct ContactsParams {
     q: Option<String>,
-    page: Option<usize>,
 }
 
 async fn contacts(
@@ -89,28 +88,47 @@ async fn contacts(
     State(state): State<AppState>,
     Query(params): Query<ContactsParams>,
     flashes: IncomingFlashes,
-) -> impl IntoResponse {
+    HxTrigger(trigger): HxTrigger,
+) -> Response {
     let mut messages = Vec::new();
     for (level, text) in &flashes {
         messages.push((level, text.to_string()));
     }
     dbg!(&params);
-    let page = params.page.unwrap_or(1);
+    if let Some(search) = &params.q {
+        let contacts = state.contact_repo.search(search).await;
+    }
     let contacts = match &params.q {
-        None => state.contact_repo.all(page).await,
-        Some(search) => state.contact_repo.search(search).await,
+        None => state.contact_repo.all().await,
+        Some(search) => {
+            let contacts = state.contact_repo.search(search).await;
+            if trigger.as_ref() == Some(&"search".to_string()) {
+                return RenderHtml(
+                    Key("rows.html".to_owned()),
+                    engine,
+                    IndexState {
+                        contacts,
+                        q: params.q,
+                        messages: vec![],
+                    },
+                )
+                .into_response();
+            } else {
+                contacts
+            }
+        }
     };
     let state = IndexState {
         q: params.q,
         contacts,
         messages,
-        page,
     };
     dbg!(&state);
     (
         flashes,
         RenderHtml(Key("index.html".to_owned()), engine, state),
     )
+        .into_response()
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
