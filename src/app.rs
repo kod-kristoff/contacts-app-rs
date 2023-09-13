@@ -277,9 +277,14 @@ async fn contacts_delete(
     State(state): State<AppState>,
     flash: Flash,
     Path(contact_id): Path<u64>,
-) -> impl IntoResponse {
+    HxTrigger(trigger): HxTrigger,
+) -> Response {
     let contact = state.contact_repo.find(contact_id).await.unwrap();
 
     state.contact_repo.delete(contact).await;
-    (flash.info("Deleted contact!"), Redirect::to("/contacts"))
+    if trigger.as_ref().map(|s| s.as_str()) == Some("delete-btn") {
+        (flash.info("Deleted contact!"), Redirect::to("/contacts")).into_response()
+    } else {
+        "".into_response()
+    }
 }
