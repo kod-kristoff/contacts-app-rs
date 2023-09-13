@@ -29,6 +29,7 @@ pub fn create_app() -> Router {
     Router::new()
         .route("/", get(|| async { Redirect::to("/contacts") }))
         .route("/contacts", get(contacts))
+        .route("/contacts/count", get(contacts_count_get))
         .route(
             "/contacts/new",
             get(get_contacts_new).post(post_contacts_new),
@@ -95,9 +96,6 @@ async fn contacts(
         messages.push((level, text.to_string()));
     }
     dbg!(&params);
-    if let Some(search) = &params.q {
-        let contacts = state.contact_repo.search(search).await;
-    }
     let contacts = match &params.q {
         None => state.contact_repo.all().await,
         Some(search) => {
@@ -129,6 +127,11 @@ async fn contacts(
         RenderHtml(Key("index.html".to_owned()), engine, state),
     )
         .into_response()
+}
+
+async fn contacts_count_get(State(state): State<AppState>) -> impl IntoResponse {
+    let count = state.contact_repo.count().await;
+    format!("({} total Contacts)", count)
 }
 
 #[derive(Debug, Clone, serde::Serialize)]

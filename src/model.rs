@@ -73,6 +73,7 @@ impl Contact {
 #[async_trait::async_trait]
 pub trait ContactRepo {
     async fn all(&self) -> Vec<Contact>;
+    async fn count(&self) -> usize;
     async fn search(&self, query: &str) -> Vec<Contact>;
     async fn save(&self, contact: Contact) -> Result<(), Contact>;
     async fn find(&self, id: u64) -> Option<Contact>;
@@ -187,6 +188,9 @@ impl ContactRepo for MemContactRepo {
         self.store.read().await.contacts.values().cloned().collect()
     }
 
+    async fn count(&self) -> usize {
+        self.store.read().await.contacts.len()
+    }
     async fn search(&self, query: &str) -> Vec<Contact> {
         let mut result = Vec::new();
         for contact in self.store.read().await.contacts.values() {
