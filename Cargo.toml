@@ -6,13 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-trait = "0.1.73"
-axum = { version = "0.6.20", features = ["macros", "form"] }
-axum-flash = "0.7.0"
-axum-htmx = "0.3.1"
-axum-template = { version = "1.0.0", features = ["minijinja"] }
-minijinja = { version = "1.0.7", features = ["loader"] }
-serde = { version = "1.0.188", features = ["derive"] }
-serde_json = "1.0.105"
-tokio = { version = "1.32.0", default-features = false, features = ["macros", "rt-multi-thread"] }
-tower-http = { version = "0.4.4", features = ["fs"] }
+async-trait = "0.1.89"
+axum = { version = "0.8.4", features = ["macros", "form"] }
+axum-htmx = "0.8.1"
+axum-messages = "0.8.0"
+axum-template = { version = "3.0.0", features = ["minijinja"] }
+fs-err = "3.3.0"
+minijinja = { version = "2.12.0", features = ["loader"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.143"
+tokio = { version = "1.47.1", default-features = false, features = ["macros", "rt-multi-thread"] }
+tower-http = { version = "0.6.6", features = ["fs"] }
+tower-sessions = "0.15.0"

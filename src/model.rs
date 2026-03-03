@@ -1,13 +1,15 @@
 use std::{
     collections::HashMap,
-    fs, io,
+    io,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
+use fs_err as fs;
+
 use tokio::sync::RwLock;
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
 pub struct Contact {
     id: Option<u64>,
     first: Option<String>,
@@ -16,19 +18,6 @@ pub struct Contact {
     pub email: Option<String>,
     #[serde(default)]
     pub errors: HashMap<String, String>,
-}
-
-impl Default for Contact {
-    fn default() -> Self {
-        Self {
-            id: None,
-            first: None,
-            last: None,
-            phone: None,
-            email: None,
-            errors: HashMap::default(),
-        }
-    }
 }
 
 impl Contact {
@@ -88,18 +77,12 @@ pub struct MemContactRepo {
     store: Arc<RwLock<ContactStore>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ContactStore {
     contacts: HashMap<u64, Contact>,
 }
 
 impl ContactStore {
-    pub fn new() -> Self {
-        Self {
-            contacts: HashMap::new(),
-        }
-    }
-
     pub fn from_path(path: &str) -> Self {
         let file = fs::File::open(path).expect("a valid path");
         let reader = io::BufReader::new(file);
@@ -112,26 +95,13 @@ impl ContactStore {
     }
 }
 
-const PAGE_SIZE: usize = 10;
-
 impl MemContactRepo {
-    pub fn new() -> Self {
-        Self {
-            path: None,
-            store: Arc::new(RwLock::new(ContactStore::new())),
-        }
-    }
-
     pub fn from_path(path: &str) -> Self {
         let store = ContactStore::from_path(path); //.expect("valid JSON");
         Self {
             path: Some(path.into()),
             store: Arc::new(RwLock::new(store)),
         }
-    }
-
-    pub fn new_shared() -> SharedContactRepo {
-        Arc::new(Self::new())
     }
 
     pub fn shared_from_path(path: &str) -> SharedContactRepo {

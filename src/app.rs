@@ -1,14 +1,15 @@
 use axum::{
     extract::{FromRef, Path, Query, State},
     response::{IntoResponse, Redirect, Response},
-    routing::{delete, get, post},
+    routing::{delete, get},
     Form, Router,
 };
-use axum_flash::{Flash, IncomingFlashes, Level};
 use axum_htmx::HxTrigger;
+use axum_messages::{Level, Messages, MessagesManagerLayer};
 use axum_template::{engine::Engine, Key, RenderHtml};
 use minijinja::{path_loader, Environment};
 use tower_http::services::ServeDir;
+use tower_sessions::{MemoryStore, SessionManagerLayer};
 
 use crate::model::{Contact, MemContactRepo, SharedContactRepo};
 
@@ -18,10 +19,12 @@ pub type AppEngine = Engine<Environment<'static>>;
 pub struct AppState {
     engine: AppEngine,
     contact_repo: SharedContactRepo,
-    flash_config: axum_flash::Config,
+    // flash_config: axum_flash::Config,
 }
 
 pub fn create_app() -> Router {
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store).with_secure(false);
     let mut jinja = Environment::new();
     jinja.set_loader(path_loader("templates"));
     jinja.add_function("get_flashed_messages", get_flashed_messages);
@@ -35,20 +38,22 @@ pub fn create_app() -> Router {
             get(get_contacts_new).post(post_contacts_new),
         )
         .route(
-            "/contacts/:contact_id/edit",
+            "/contacts/{contact_id}/edit",
             get(contacts_edit_get).post(contacts_edit_post),
         )
-        .route("/contacts/:contact_id/email", get(contacts_email_get))
+        .route("/contacts/{contact_id}/email", get(contacts_email_get))
         .route(
-            "/contacts/:contact_id",
+            "/contacts/{contact_id}",
             delete(contacts_delete).get(contact_view),
         )
         .nest_service("/static", ServeDir::new("static"))
         .with_state(AppState {
             engine: Engine::from(jinja),
             contact_repo: repo,
-            flash_config: axum_flash::Config::new(axum_flash::Key::generate()),
+            // flash_config: axum_flash::Config::new(axum_flash::Key::generate()),
         })
+        .layer(MessagesManagerLayer)
+        .layer(session_layer)
 }
 
 fn get_flashed_messages(
@@ -88,12 +93,12 @@ async fn contacts(
     engine: AppEngine,
     State(state): State<AppState>,
     Query(params): Query<ContactsParams>,
-    flashes: IncomingFlashes,
+    messages: Messages,
     HxTrigger(trigger): HxTrigger,
 ) -> Response {
-    let mut messages = Vec::new();
-    for (level, text) in &flashes {
-        messages.push((level, text.to_string()));
+    let mut messages_out = Vec::new();
+    for msg in messages {
+        messages_out.push((msg.level, msg.message.clone()));
     }
     dbg!(&params);
     let contacts = match &params.q {
@@ -119,14 +124,10 @@ async fn contacts(
     let state = IndexState {
         q: params.q,
         contacts,
-        messages,
+        messages: messages_out,
     };
     dbg!(&state);
-    (
-        flashes,
-        RenderHtml(Key("index.html".to_owned()), engine, state),
-    )
-        .into_response()
+    RenderHtml(Key("index.html".to_owned()), engine, state).into_response()
 }
 
 async fn contacts_count_get(State(state): State<AppState>) -> impl IntoResponse {
@@ -165,16 +166,16 @@ impl From<NewContact> for Contact {
 async fn post_contacts_new(
     engine: AppEngine,
     State(state): State<AppState>,
-    flash: Flash,
+    messages: Messages,
     Form(new_contact): Form<NewContact>,
 ) -> Response {
     let contact = Contact::from(new_contact);
     match state.contact_repo.save(contact).await {
-        Ok(()) => (
-            flash.info("Created new contact!"),
-            Redirect::to("/contacts"),
-        )
-            .into_response(),
+        Ok(()) => {
+            messages.info("Created new contact!");
+            Redirect::to("/contacts").into_response()
+        }
+
         Err(contact) => RenderHtml(
             Key("new.html".to_owned()),
             engine,
@@ -245,7 +246,7 @@ async fn contacts_email_get(
 async fn contacts_edit_post(
     engine: AppEngine,
     State(state): State<AppState>,
-    flash: Flash,
+    messages: Messages,
     Path(contact_id): Path<u64>,
     Form(new_contact): Form<NewContact>,
 ) -> Response {
@@ -259,11 +260,10 @@ async fn contacts_edit_post(
     contact.update(first_name, last_name, phone, email);
 
     match state.contact_repo.save(contact).await {
-        Ok(()) => (
-            flash.info("Updated contact!"),
-            Redirect::to(&format!("/contacts/{contact_id}")),
-        )
-            .into_response(),
+        Ok(()) => {
+            messages.info("Updated contact!");
+            Redirect::to(&format!("/contacts/{contact_id}")).into_response()
+        }
         Err(contact) => RenderHtml(
             Key("edit.html".to_owned()),
             engine,
@@ -275,7 +275,7 @@ async fn contacts_edit_post(
 
 async fn contacts_delete(
     State(state): State<AppState>,
-    flash: Flash,
+    messages: Messages,
     Path(contact_id): Path<u64>,
     HxTrigger(trigger): HxTrigger,
 ) -> Response {
@@ -283,7 +283,8 @@ async fn contacts_delete(
 
     state.contact_repo.delete(contact).await;
     if trigger.as_ref().map(|s| s.as_str()) == Some("delete-btn") {
-        (flash.info("Deleted contact!"), Redirect::to("/contacts")).into_response()
+        messages.info("Deleted contact!");
+        Redirect::to("/contacts").into_response()
     } else {
         "".into_response()
     }
