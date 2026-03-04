@@ -1,0 +1,78 @@
+# Run scheduled (rolling) jobs on a nightly basis, as your crate may break independently of any
+# given PR. E.g., updates to rust nightly and updates to this crates dependencies. See check.yml for
+# information about how the concurrency cancellation and workflow triggering works
+permissions:
+  contents: read
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "7 7 * * *"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+name: rolling
+jobs:
+  # https://twitter.com/mycoliza/status/1571295690063753218
+  nightly:
+    runs-on: ubuntu-latest
+    name: ubuntu / nightly
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Install nightly
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # master
+        with:
+          toolchain: nightly
+      - name: cargo generate-lockfile
+        if: hashFiles('Cargo.lock') == ''
+        run: cargo generate-lockfile
+      - name: cargo test --locked
+        run: cargo test --locked --all-features --all-targets
+  # https://twitter.com/alcuadrado/status/1571291687837732873
+  update:
+    # This action checks that updating the dependencies of this crate to the latest available that
+    # satisfy the versions in Cargo.toml does not break this crate. This is important as consumers
+    # of this crate will generally use the latest available crates. This is subject to the standard
+    # Cargo semver rules (i.e cargo does not update to a new major version unless explicitly told
+    # to).
+    runs-on: ubuntu-latest
+    name: ubuntu / beta / updated
+    # There's no point running this if no Cargo.lock was checked in in the first place, since we'd
+    # just redo what happened in the regular test job. Unfortunately, hashFiles only works in if on
+    # steps, so we repeat it.
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Install beta
+        if: hashFiles('Cargo.lock') != ''
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # master
+        with:
+          toolchain: beta
+      - name: cargo update
+        if: hashFiles('Cargo.lock') != ''
+        run: cargo update
+      - name: cargo test
+        if: hashFiles('Cargo.lock') != ''
+        run: cargo test --locked --all-features --all-targets
+        env:
+          RUSTFLAGS: -D deprecated
+
+  # https://github.com/marketplace/actions/alls-green#why used for branch protection checks
+  scheduled-check:
+    if: always()
+    needs:
+      - nightly
+      - update
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # release/v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}
