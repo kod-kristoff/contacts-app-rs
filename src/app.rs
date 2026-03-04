@@ -240,7 +240,7 @@ async fn contacts_email_get(
         .errors
         .get("email")
         .cloned()
-        .unwrap_or_else(|| String::new())
+        .unwrap_or_else(String::new)
 }
 
 async fn contacts_edit_post(
@@ -282,7 +282,7 @@ async fn contacts_delete(
     let contact = state.contact_repo.find(contact_id).await.unwrap();
 
     state.contact_repo.delete(contact).await;
-    if trigger.as_ref().map(|s| s.as_str()) == Some("delete-btn") {
+    if trigger.as_deref() == Some("delete-btn") {
         messages.info("Deleted contact!");
         Redirect::to("/contacts").into_response()
     } else {

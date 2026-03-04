@@ -43,7 +43,7 @@ impl Contact {
         if self.email.as_ref().is_some_and(|s| s.is_empty()) {
             self.errors.insert("email".into(), "Email Required".into());
         }
-        self.errors.len() == 0
+        self.errors.is_empty()
     }
 
     pub fn update(
@@ -140,8 +140,7 @@ impl MemContactRepo {
     async fn save_db(&self) {
         let path = self
             .path
-            .as_ref()
-            .map(|p| p.as_path())
+            .as_deref()
             .unwrap_or_else(|| Path::new("contacts.json"));
         let file = fs::File::create(path).expect("file exist");
         let writer = io::BufWriter::new(file);
