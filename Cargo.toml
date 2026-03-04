@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.89"
-axum = { version = "0.8.4", features = ["macros", "form"] }
+axum = { version = "0.8.4", features = ["form", "macros"] }
 axum-htmx = "0.8.1"
 axum-messages = "0.8.0"
 axum-template = { version = "3.0.0", features = ["minijinja"] }
@@ -15,6 +15,11 @@ fs-err = "3.3.0"
 minijinja = { version = "2.12.0", features = ["loader"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.143"
-tokio = { version = "1.47.1", default-features = false, features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.47.1", default-features = false, features = [
+  "macros",
+  "rt-multi-thread"
+] }
 tower-http = { version = "0.6.6", features = ["fs"] }
-tower-sessions = "0.15.0"
+tower-sessions = "0.14.0"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
