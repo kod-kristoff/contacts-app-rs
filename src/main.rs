@@ -4,7 +4,7 @@ mod model;
 use app::create_app;
 use tokio::net::TcpListener;
 use tracing::subscriber::set_global_default;
-use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
+use tracing_subscriber::{EnvFilter, Registry, fmt, layer::SubscriberExt};
 
 #[tokio::main]
 async fn main() {

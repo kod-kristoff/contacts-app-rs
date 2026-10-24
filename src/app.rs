@@ -1,13 +1,13 @@
 use axum::{
+    Form, Router,
     extract::{FromRef, Path, Query, State},
     response::{IntoResponse, Redirect, Response},
     routing::{delete, get},
-    Form, Router,
 };
 use axum_htmx::HxTrigger;
 use axum_messages::{Level, Messages, MessagesManagerLayer};
-use axum_template::{engine::Engine, Key, RenderHtml};
-use minijinja::{path_loader, Environment};
+use axum_template::{Key, RenderHtml, engine::Engine};
+use minijinja::{Environment, path_loader};
 use tower_http::services::ServeDir;
 use tower_sessions::{MemoryStore, SessionManagerLayer};
 
